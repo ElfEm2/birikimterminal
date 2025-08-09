@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Birikim & Harcama Planlama — Ay Bazlı</title>
+<style>
+  :root{
+    --pink:#ff69b4;
+    --dark:#000;
+    --panel:#111;
+    --muted:#888;
+  }
+  html,body{height:100%;margin:0;background:var(--dark);color:#fff;font-family:Arial,Helvetica,sans-serif;}
+  /* Top badges */
+  #tarihSaat{position:fixed;top:12px;left:12px;background:rgba(34,34,34,0.9);padding:10px 12px;border-radius:8px;font-weight:600;z-index:999;}
+  #toplamBirikim{position:fixed;top:12px;right:12px;background:rgba(34,0,34,0.95);padding:10px 12px;border-radius:8px;color:var(--pink);font-weight:700;z-index:999;}
+  /* Month nav */
+  #ayNav{max-width:760px;margin:70px auto 8px;display:flex;gap:10px;justify-content:center;align-items:center;padding:0 12px}
+  #ayNav button{background:transparent;border:2px solid var(--pink);color:var(--pink);padding:8px 12px;border-radius:8px;cursor:pointer}
+  #ayNav button:hover{background:var(--pink);color:#000}
+  #ayLabel{font-weight:700;font-size:1.05rem;padding:6px 10px;border-radius:6px;background:rgba(17,10,17,0.6);border:2px solid rgba(255,105,180,0.12)}
+  /* Container */
+  .container{max-width:760px;margin:12px auto 80px;padding:18px;border-radius:12px;border:2px solid var(--pink);background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(6,6,6,0.9));}
+  h1{text-align:center;margin:0 0 12px;font-size:1.5rem}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  label{display:inline-block;width:140px}
+  input[type=number]{width:160px;padding:8px;border-radius:6px;border:2px solid var(--pink);background:var(--panel);color:#fff}
+  input[readonly]{background:#222;border-color:#555;color:#ccc}
+  .btn{display:inline-block;padding:10px 16px;border-radius:8px;border:2px solid var(--pink);background:transparent;color:var(--pink);cursor:pointer;font-weight:700}
+  .btn:hover{background:var(--pink);color:#000}
+  .section{padding:12px;border-radius:10px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,105,180,0.06)}
+  .hafta-row{display:flex;align-items:center;gap:8px;margin:8px 0}
+  .ikon{font-size:1.2rem;width:28px;text-align:center}
+  .muted{color:var(--muted);font-size:0.95rem}
+  .full-width{width:100%}
+  hr{border:0;border-top:1px solid rgba(255,105,180,0.06);margin:14px 0}
+  #kontroller{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:12px}
+  #sifirlaBtn{background:#880000;border:2px solid #ff6a6a;color:#fff;padding:10px 12px;border-radius:8px;cursor:pointer}
+  #sifirlaBtn:hover{opacity:0.9}
+  @media(max-width:700px){
+    .grid{grid-template-columns:1fr; }
+    label{width:120px}
+    input[type=number]{width:130px}
+  }
+</style>
+</head>
+<body>
+
+<!-- Top left: chosen month & current time -->
+<div id="tarihSaat">Ay • Tarih • Saat</div>
+<!-- Top right: total saved -->
+<div id="toplamBirikim">Toplam Birikim: 0 ₺</div>
+
+<!-- Month navigation -->
+<div id="ayNav">
+  <button id="oncekiAyBtn">&larr; Önceki Ay</button>
+  <div id="ayLabel">Ay Yıl</div>
+  <button id="sonrakiAyBtn">Sonraki Ay &rarr;</button>
+</div>
+
+<!-- Main container -->
+<div class="container">
+
+  <h1>Birikim & Harcama Planlama (Ay Bazlı)</h1>
+
+  <div class="grid">
+    <!-- Birikim panel -->
+    <div class="section" id="birikimSection">
+      <h3>Birikim Planlaması</h3>
+
+      <div style="margin:8px 0">
+        <label for="aylikGelir">Aylık Gelir:</label>
+        <input type="number" id="aylikGelir" min="0" placeholder="Örn: 10000"/>
+      </div>
+
+      <div style="margin:8px 0">
+        <label for="hedefBirikim">Hedef Birikim:</label>
+        <input type="number" id="hedefBirikim" min="0" placeholder="Örn: 10000"/>
+      </div>
+
+      <div style="margin:8px 0">
+        <label for="haftalikBirikimHedef">Haftalık Birikim Hedefi:</label>
+        <input type="number" id="haftalikBirikimHedef" readonly />
+        <span class="muted" style="margin-left:8px"> (otomatik)</span>
+      </div>
+
+      <div style="margin-top:10px">
+        <button id="planlaBtn" class="btn">Planlama Oluştur / Güncelle</button>
+      </div>
+
+      <div id="haftalikBirikimInputs" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Harcama panel -->
+    <div class="section" id="harcamaSection">
+      <h3>Haftalık Harcama Planlaması</h3>
+
+      <div style="margin:8px 0">
+        <label for="aylikGelirHarcama">Aylık Gelir:</label>
+        <input type="number" id="aylikGelirHarcama" readonly />
+      </div>
+
+      <div style="margin:8px 0">
+        <label for="hedefBirikimHarcama">Hedef Birikim:</label>
+        <input type="number" id="hedefBirikimHarcama" readonly />
+      </div>
+
+      <div style="margin:8px 0">
+        <label for="haftalikHarcamaHesap">Max Haftalık Harcama:</label>
+        <input type="number" id="haftalikHarcamaHesap" readonly />
+        <span class="muted" style="margin-left:8px"> (gelir - hedef) / hafta</span>
+      </div>
+
+      <div id="haftalikHarcamaInputs" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <hr/>
+
+  <div id="kontroller">
+    <div class="muted">Not: Her ayın verileri ayrı saklanır. "Sıfırla" sadece bu ayı temizler.</div>
+    <div>
+      <button id="sifirlaBtn">Sıfırla (Bu Ay)</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/*
+  Tek dosya — ay bazlı veri saklama.
+  Özellikler:
+   - HAFTA_SAYISI: haftalık kutu sayısı (buradan değiştirilebilir)
+   - Her ay için localStorage anahtarı: birikim-YYYY-MM
+   - Önceki / Sonraki ay ile secili ay değişir, veriler yüklenir
+   - Planlama oluşturma günceller; haftalık hedefler ve max harcama hesaplanır
+   - Haftalık inputlar değişince o aya kaydedilir
+   - Toplam birikim sağ üstte gösterilir (o ayın toplamı)
+*/
+
+(() => {
+  const HAFTA_SAYISI = 4;
+
+  // DOM
+  const tarihSaatEl = document.getElementById('tarihSaat');
+  const toplamBirikimEl = document.getElementById('toplamBirikim');
+  const ayLabelEl = document.getElementById('ayLabel');
+  const oncekiAyBtn = document.getElementById('oncekiAyBtn');
+  const sonrakiAyBtn = document.getElementById('sonrakiAyBtn');
+
+  const aylikGelirInput = document.getElementById('aylikGelir');
+  const hedefBirikimInput = document.getElementById('hedefBirikim');
+  const haftalikBirikimHedefInput = document.getElementById('haftalikBirikimHedef');
+  const planlaBtn = document.getElementById('planlaBtn');
+  const haftalikBirikimInputsDiv = document.getElementById('haftalikBirikimInputs');
+
+  const aylikGelirHarcamaInput = document.getElementById('aylikGelirHarcama');
+  const hedefBirikimHarcamaInput = document.getElementById('hedefBirikimHarcama');
+  const haftalikHarcamaHesapInput = document.getElementById('haftalikHarcamaHesap');
+  const haftalikHarcamaInputsDiv = document.getElementById('haftalikHarcamaInputs');
+
+  const sifirlaBtn = document.getElementById('sifirlaBtn');
+  const harcamaSection = document.getElementById('harcamaSection');
+  const birikimSection = document.getElementById('birikimSection');
+
+  // seçili ay tarih objesi (ilk gün)
+  let seciliTarih = new Date(); // başta şu anki ay
+  seciliTarih.setDate(1);
+
+  // localStorage anahtar fonksiyonu
+  function keyFor(date){
+    const y = date.getFullYear();
+    const m = (date.getMonth()+1).toString().padStart(2,'0');
+    return `birikim-${y}-${m}`;
+  }
+
+  // month label
+  function updateAyLabel(){
+    const label = seciliTarih.toLocaleDateString('tr-TR', { year:'numeric', month:'long' });
+    ayLabelEl.textContent = label;
+  }
+
+  // gün/saat güncelleme
+  function updateSaat(){
+    const now = new Date();
+    const saat = now.toLocaleTimeString('tr-TR');
+    const tarih = seciliTarih.toLocaleDateString('tr-TR', { year:'numeric', month:'long' });
+    tarihSaatEl.textContent = `${tarih} • ${saat}`;
+  }
+  setInterval(updateSaat, 1000);
+  updateSaat();
+
+  // o ayın verisi obje yapısı
+  function emptyMonthData(){
+    return {
+      aylikGelir: 0,
+      hedefBirikim: 0,
+      haftalikBirikim: Array(HAFTA_SAYISI).fill(0),
+      haftalikHarcama: Array(HAFTA_SAYISI).fill(0)
+    };
+  }
+
+  // load & save current month
+  function loadMonth(){
+    updateAyLabel();
+    updateSaat();
+    const k = keyFor(seciliTarih);
+    const raw = localStorage.getItem(k);
+    let data = raw ? JSON.parse(raw) : emptyMonthData();
+
+    // populate inputs
+    aylikGelirInput.value = data.aylikGelir || '';
+    hedefBirikimInput.value = data.hedefBirikim || '';
+    haftalikBirikimHedefInput.value = computeWeeklySavingsTarget(data).toFixed(2);
+
+    aylikGelirHarcamaInput.value = data.aylikGelir || '';
+    hedefBirikimHarcamaInput.value = data.hedefBirikim || '';
+    haftalikHarcamaHesapInput.value = computeWeeklySpendingMax(data).toFixed(2);
+
+    // render weekly inputs
+    renderWeeklySavingsInputs(data);
+    renderWeeklySpendingInputs(data);
+
+    updateTotals(data);
+  }
+
+  function saveMonth(data){
+    const k = keyFor(seciliTarih);
+    localStorage.setItem(k, JSON.stringify(data));
+    updateTotals(data);
+  }
+
+  function getMonthData(){
+    const k = keyFor(seciliTarih);
+    const raw = localStorage.getItem(k);
+    return raw ? JSON.parse(raw) : emptyMonthData();
+  }
+
+  // hesaplar
+  function computeWeeklySavingsTarget(data){
+    const hedef = parseFloat(data.hedefBirikim) || 0;
+    return (hedef / HAFTA_SAYISI) || 0;
+  }
+  function computeWeeklySpendingMax(data){
+    const gelir = parseFloat(data.aylikGelir) || 0;
+    const hedef = parseFloat(data.hedefBirikim) || 0;
+    const allowed = gelir - hedef;
+    return (allowed <= 0) ? 0 : (allowed / HAFTA_SAYISI);
+  }
+
+  // render haftalık birikim inputları
+  function renderWeeklySavingsInputs(data){
+    haftalikBirikimInputsDiv.innerHTML = '<h4>Haftalık Birikim</h4>';
+    const weeklyTarget = computeWeeklySavingsTarget(data);
+    for(let i=0;i<HAFTA_SAYISI;i++){
+      const row = document.createElement('div'); row.className='hafta-row';
+      const lbl = document.createElement('div'); lbl.textContent = `${i+1}. Hafta hedef: ${weeklyTarget.toFixed(2)} ₺`; lbl.className='muted';
+      const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.step='0.01'; inp.value = data.haftalikBirikim[i] || '';
+      inp.id = `sav-${i}`;
+      inp.style.marginLeft='8px';
+      inp.addEventListener('input', ()=> {
+        const d = getMonthData();
+        d.haftalikBirikim[i] = parseFloat(inp.value) || 0;
+        saveMonth(d);
+        updateSavingsIcon(i);
+        updateTotals(d);
+      });
+      const ik = document.createElement('div'); ik.className='ikon'; ik.id=`savIk-${i}`;
+      row.appendChild(lbl);
+      row.appendChild(inp);
+      row.appendChild(ik);
+      haftalikBirikimInputsDiv.appendChild(row);
+      // initial icon
+      updateSavingsIcon(i);
+    }
+  }
+
+  // render haftalık harcama inputları
+  function renderWeeklySpendingInputs(data){
+    haftalikHarcamaInputsDiv.innerHTML = '<h4>Haftalık Harcama</h4>';
+    const maxPerWeek = computeWeeklySpendingMax(data);
+    for(let i=0;i<HAFTA_SAYISI;i++){
+      const row = document.createElement('div'); row.className='hafta-row';
+      const lbl = document.createElement('div'); lbl.textContent = `${i+1}. Hafta max: ${maxPerWeek.toFixed(2)} ₺`; lbl.className='muted';
+      const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.step='0.01'; inp.value = data.haftalikHarcama[i] || '';
+      inp.id = `spend-${i}`;
+      inp.style.marginLeft='8px';
+      inp.addEventListener('input', ()=> {
+        const d = getMonthData();
+        d.haftalikHarcama[i] = parseFloat(inp.value) || 0;
+        saveMonth(d);
+        updateSpendingIcon(i);
+      });
+      const ik = document.createElement('div'); ik.className='ikon'; ik.id=`spendIk-${i}`;
+      row.appendChild(lbl);
+      row.appendChild(inp);
+      row.appendChild(ik);
+      haftalikHarcamaInputsDiv.appendChild(row);
+      updateSpendingIcon(i);
+    }
+  }
+
+  // ikon güncellemeleri
+  function updateSavingsIcon(i){
+    const d = getMonthData();
+    const val = parseFloat(d.haftalikBirikim[i]) || 0;
+    const need = computeWeeklySavingsTarget(d);
+    const el = document.getElementById(`savIk-${i}`);
+    if(!el) return;
+    if(val >= need && need>0){ el.textContent='🙂'; el.style.color='lightgreen'; }
+    else if (!isNaN(val) && val>0){ el.textContent='😟'; el.style.color='red'; }
+    else { el.textContent=''; }
+  }
+  function updateSpendingIcon(i){
+    const d = getMonthData();
+    const val = parseFloat(d.haftalikHarcama[i]) || 0;
+    const max = computeWeeklySpendingMax(d);
+    const el = document.getElementById(`spendIk-${i}`);
+    if(!el) return;
+    if(val <= max){ el.textContent='🙂'; el.style.color='lightgreen'; }
+    else if (!isNaN(val) && val>0){ el.textContent='😟'; el.style.color='red'; }
+    else { el.textContent=''; }
+  }
+
+  // toplam ve UI güncellemeleri
+  function updateTotals(data){
+    // toplam birikim o ay içinde toplam (haftalık birikim toplamı)
+    const total = (data.haftalikBirikim || []).reduce((a,b)=>a+(parseFloat(b)||0),0);
+    toplamBirikimEl.textContent = `Toplam Birikim: ${total.toFixed(2)} ₺`;
+    // update weekly target & spending max displays
+    haftalikBirikimHedefInput.value = computeWeeklySavingsTarget(data).toFixed(2);
+    haftalikHarcamaHesapInput.value = computeWeeklySpendingMax(data).toFixed(2);
+    // update icons for all
+    for(let i=0;i<HAFTA_SAYISI;i++){
+      updateSavingsIcon(i);
+      updateSpendingIcon(i);
+    }
+  }
+
+  // Planla/Güncelle butonu
+  planlaBtn.addEventListener('click', ()=>{
+    const aylik = parseFloat(aylikGelirInput.value) || 0;
+    const hedef = parseFloat(hedefBirikimInput.value) || 0;
+    if(aylik<=0 || hedef<=0){ alert('Lütfen geçerli aylık gelir ve hedef birikim girin (sıfırdan büyük).'); return; }
+    if(hedef > aylik){ if(!confirm('Hedef birikim aylık gelirden büyük. Yine de kaydetmek istiyor musunuz?')) return; }
+    const d = getMonthData();
+    d.aylikGelir = aylik;
+    d.hedefBirikim = hedef;
+    // ensure arrays exist
+    d.haftalikBirikim = d.haftalikBirikim || Array(HAFTA_SAYISI).fill(0);
+    d.haftalikHarcama = d.haftalikHarcama || Array(HAFTA_SAYISI).fill(0);
+    saveMonth(d);
+    // refresh views
+    loadMonth();
+    // show harcama section
+    harcamaSection.style.display = 'block';
+  });
+
+  // Ay değiştir (adım -1 veya +1)
+  oncekiAyBtn.addEventListener('click', ()=> {
+    seciliTarih.setMonth(seciliTarih.getMonth()-1);
+    loadMonth();
+  });
+  sonrakiAyBtn.addEventListener('click', ()=> {
+    seciliTarih.setMonth(seciliTarih.getMonth()+1);
+    loadMonth();
+  });
+
+  // Sıfırla (sadece bu ay)
+  sifirlaBtn.addEventListener('click', ()=>{
+    if(!confirm('Bu ayın verileri silinecek. Emin misiniz?')) return;
+    const k = keyFor(seciliTarih);
+    localStorage.removeItem(k);
+    // reload empty month
+    loadMonth();
+  });
+
+  // başlangıç: yükle. Eğer veri yoksa harcama bölümünü gizle
+  function init(){
+    updateAyLabel();
+    const d = getMonthData();
+    if((d.aylikGelir && d.hedefBirikim) && (d.aylikGelir>0 || d.hedefBirikim>0)){
+      harcamaSection.style.display = 'block';
+    } else {
+      harcamaSection.style.display = 'none';
+    }
+    loadMonth();
+  }
+  init();
+
+})();
+</script>
+
+</body>
+</html>
